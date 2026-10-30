@@ -1,0 +1,15 @@
+Forgery Detection Model Evaluation
+==================================================
+Accuracy: 0.8858
+Precision: 1.0000
+Recall: 0.7717
+F1: 0.8711
+
+              precision    recall  f1-score   support
+
+   Authentic       0.81      1.00      0.90       600
+    Tampered       1.00      0.77      0.87       600
+
+    accuracy                           0.89      1200
+   macro avg       0.91      0.89      0.88      1200
+weighted avg       0.91      0.89      0.88      1200

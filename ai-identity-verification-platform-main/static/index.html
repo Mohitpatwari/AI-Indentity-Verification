@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Identity Verification Platform</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #161920;
+    --panel-border: #262b36;
+    --text: #e8eaed;
+    --text-dim: #9aa0ac;
+    --accent: #4f7cff;
+    --accent-dim: #2a3a66;
+    --success: #3ecf8e;
+    --warning: #f5a623;
+    --danger: #ef4444;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  header {
+    padding: 28px 40px;
+    border-bottom: 1px solid var(--panel-border);
+  }
+  header h1 { margin: 0; font-size: 1.4rem; font-weight: 600; }
+  header p { margin: 4px 0 0; color: var(--text-dim); font-size: 0.9rem; }
+
+  .container {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 32px 24px 80px;
+  }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .card h2 {
+    margin: 0 0 16px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .upload-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 640px) { .upload-grid { grid-template-columns: 1fr; } }
+
+  .dropzone {
+    border: 1.5px dashed var(--panel-border);
+    border-radius: var(--radius);
+    padding: 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    position: relative;
+  }
+  .dropzone:hover { border-color: var(--accent); background: rgba(79,124,255,0.05); }
+  .dropzone.has-file { border-color: var(--success); background: rgba(62,207,142,0.06); }
+  .dropzone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .dropzone .label { font-weight: 500; margin-bottom: 4px; }
+  .dropzone .filename { font-size: 0.82rem; color: var(--text-dim); word-break: break-all; }
+  .dropzone img.preview {
+    max-width: 100%; max-height: 120px; margin-top: 10px; border-radius: 6px;
+  }
+
+  button.verify-btn {
+    width: 100%;
+    margin-top: 20px;
+    padding: 14px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  button.verify-btn:hover { opacity: 0.9; }
+  button.verify-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .status-banner {
+    display: none;
+    padding: 16px 20px;
+    border-radius: var(--radius);
+    margin-bottom: 20px;
+    font-weight: 600;
+    align-items: center;
+    gap: 10px;
+  }
+  .status-banner.verified { background: rgba(62,207,142,0.12); color: var(--success); border: 1px solid rgba(62,207,142,0.3); }
+  .status-banner.review { background: rgba(245,166,35,0.12); color: var(--warning); border: 1px solid rgba(245,166,35,0.3); }
+
+  .results-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+  @media (max-width: 640px) { .results-grid { grid-template-columns: 1fr; } }
+
+  .metric-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--panel-border);
+    font-size: 0.9rem;
+  }
+  .metric-row:last-child { border-bottom: none; }
+  .metric-row .k { color: var(--text-dim); }
+  .metric-row .v { font-weight: 600; }
+  .badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+  .badge.ok { background: rgba(62,207,142,0.15); color: var(--success); }
+  .badge.bad { background: rgba(239,68,68,0.15); color: var(--danger); }
+  .badge.unknown { background: rgba(154,160,172,0.15); color: var(--text-dim); }
+
+  .report-box {
+    white-space: pre-wrap;
+    font-size: 0.88rem;
+    line-height: 1.6;
+    color: var(--text-dim);
+    background: #101319;
+    border-radius: 8px;
+    padding: 16px;
+  }
+
+  .ocr-text {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    max-height: 140px;
+    overflow-y: auto;
+    background: #101319;
+    border-radius: 8px;
+    padding: 12px;
+    line-height: 1.5;
+  }
+
+  .loader {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-dim);
+    font-size: 0.9rem;
+    margin-top: 16px;
+  }
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid var(--panel-border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  #results { display: none; }
+  footer { text-align: center; color: var(--text-dim); font-size: 0.78rem; padding: 20px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>AI Identity Verification Platform</h1>
+  <p>Document classification &middot; OCR &middot; face verification &middot; forgery detection &middot; AI report</p>
+</header>
+
+<div class="container">
+
+  <div class="card">
+    <h2>Upload</h2>
+    <form id="verifyForm">
+      <div class="upload-grid">
+        <label class="dropzone" id="dzId">
+          <div class="label">📄 ID Document</div>
+          <div class="filename" id="idFileName">Click or drop a file</div>
+          <img class="preview" id="idPreview" style="display:none">
+          <input type="file" name="id_document" id="idInput" accept="image/*" required>
+        </label>
+        <label class="dropzone" id="dzSelfie">
+          <div class="label">🙂 Selfie</div>
+          <div class="filename" id="selfieFileName">Click or drop a file</div>
+          <img class="preview" id="selfiePreview" style="display:none">
+          <input type="file" name="selfie" id="selfieInput" accept="image/*" required>
+        </label>
+      </div>
+      <button type="submit" class="verify-btn" id="submitBtn">Run Verification</button>
+      <div class="loader" id="loader"><div class="spinner"></div> Processing — models may take a moment to warm up…</div>
+    </form>
+  </div>
+
+  <div id="results">
+    <div class="status-banner" id="statusBanner"></div>
+
+    <div class="results-grid">
+      <div class="card">
+        <h2>Document</h2>
+        <div class="metric-row"><span class="k">Type</span><span class="v" id="docType">—</span></div>
+        <div class="metric-row"><span class="k">Confidence</span><span class="v" id="docConf">—</span></div>
+        <div class="metric-row"><span class="k">Extracted fields</span><span class="v" id="extractStatus">—</span></div>
+      </div>
+
+      <div class="card">
+        <h2>Face Verification</h2>
+        <div class="metric-row"><span class="k">Match</span><span class="v" id="faceMatch">—</span></div>
+        <div class="metric-row"><span class="k">Similarity</span><span class="v" id="faceSim">—</span></div>
+      </div>
+
+      <div class="card">
+        <h2>Forgery Check</h2>
+        <div class="metric-row"><span class="k">Risk score</span><span class="v" id="forgeryScore">—</span></div>
+        <div class="metric-row"><span class="k">Flag</span><span class="v" id="forgeryFlag">—</span></div>
+      </div>
+
+      <div class="card">
+        <h2>OCR Preview</h2>
+        <div class="ocr-text" id="ocrText">—</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Verification Report</h2>
+      <div class="report-box" id="reportText">—</div>
+    </div>
+  </div>
+
+</div>
+
+<footer>Built with FastAPI, PaddleOCR, InsightFace, a custom PyTorch/ONNX forgery-detection CNN, and Gemini.</footer>
+
+<script>
+function setupDropzone(dzId, inputId, nameId, previewId) {
+  const input = document.getElementById(inputId);
+  const dz = document.getElementById(dzId);
+  const nameEl = document.getElementById(nameId);
+  const preview = document.getElementById(previewId);
+  input.addEventListener('change', () => {
+    if (input.files && input.files[0]) {
+      const file = input.files[0];
+      nameEl.textContent = file.name;
+      dz.classList.add('has-file');
+      const reader = new FileReader();
+      reader.onload = e => { preview.src = e.target.result; preview.style.display = 'block'; };
+      reader.readAsDataURL(file);
+    }
+  });
+}
+setupDropzone('dzId', 'idInput', 'idFileName', 'idPreview');
+setupDropzone('dzSelfie', 'selfieInput', 'selfieFileName', 'selfiePreview');
+
+function badge(ok, textTrue, textFalse) {
+  return ok
+    ? `<span class="badge ok">${textTrue}</span>`
+    : `<span class="badge bad">${textFalse}</span>`;
+}
+
+document.getElementById('verifyForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('submitBtn');
+  const loader = document.getElementById('loader');
+  const results = document.getElementById('results');
+
+  btn.disabled = true;
+  loader.style.display = 'flex';
+  results.style.display = 'none';
+
+  try {
+    const res = await fetch('/api/v1/verify', { method: 'POST', body: new FormData(e.target) });
+    const data = await res.json();
+
+    if (data.error) {
+      alert('Error: ' + data.error);
+      return;
+    }
+
+    const cls = data.classification || {};
+    const face = data.face_verification || {};
+    const forgery = data.forgery_check || {};
+    const extraction = data.extraction || {};
+
+    document.getElementById('docType').textContent = cls.document_type ?? '—';
+    document.getElementById('docConf').textContent = cls.confidence != null ? (cls.confidence * 100).toFixed(0) + '%' : '—';
+    document.getElementById('extractStatus').innerHTML = badge(
+      extraction.status === 'success', 'Fields found', extraction.status || 'none'
+    );
+
+    document.getElementById('faceMatch').innerHTML = badge(face.match, 'MATCH', 'NO MATCH');
+    document.getElementById('faceSim').textContent = face.similarity != null ? face.similarity : '—';
+
+    document.getElementById('forgeryScore').textContent = forgery.risk_score != null ? forgery.risk_score : '—';
+    document.getElementById('forgeryFlag').innerHTML = badge(
+      forgery.suspicious === false, 'Authentic', forgery.suspicious === true ? 'Suspicious' : 'N/A'
+    );
+
+    document.getElementById('ocrText').textContent = (data.ocr && data.ocr.full_text) || '—';
+    document.getElementById('reportText').textContent = data.report || '—';
+
+    const banner = document.getElementById('statusBanner');
+    const verified = face.match && cls.confidence > 0.3;
+    banner.className = 'status-banner ' + (verified ? 'verified' : 'review');
+    banner.style.display = 'flex';
+    banner.textContent = verified ? '✅ VERIFIED' : '⚠️ REVIEW REQUIRED';
+
+    results.style.display = 'block';
+  } catch (err) {
+    alert('Request failed: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    loader.style.display = 'none';
+  }
+});
+</script>
+
+</body>
+</html>

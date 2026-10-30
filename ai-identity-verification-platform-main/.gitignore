@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.env
+venv/
+*.onnx
+.DS_Store
+*.db
+ml/training/data/
+ml/training/checkpoints/
+requirements_frozen.txt
